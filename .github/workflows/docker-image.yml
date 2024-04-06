@@ -7,11 +7,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
     - name: Free Disk Space (Ubuntu)
@@ -35,12 +32,9 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      -
-        name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          push: true
-          tags: skyadmin/worker-a1111:latest
-        
-    # - name: Build the Docker image
-    #   run: docker build . --file Dockerfile --tag skyadmin/worker-a1111:$(date +%s)
+    -
+      name: Build and push
+      uses: docker/build-push-action@v5
+      with:
+        push: true
+        tags: skyadmin/worker-a1111:latest
