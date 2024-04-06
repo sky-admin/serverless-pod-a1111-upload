@@ -3,10 +3,20 @@ import time
 import runpod
 import requests
 from requests.adapters import HTTPAdapter, Retry
+from runpod.serverless.utils import rp_upload
+import base64
+from io import BytesIO
+from PIL import Image
 
 automatic_session = requests.Session()
 retries = Retry(total=10, backoff_factor=0.1, status_forcelist=[502, 503, 504])
 automatic_session.mount('http://', HTTPAdapter(max_retries=retries))
+
+
+# 保存base64图片到image.jpg
+def compress_image(base64_data):
+    image = Image.open(BytesIO(base64.b64decode(base64_data)))
+    image.save("image.jpg", "JPEG", quality=90)
 
 
 # ---------------------------------------------------------------------------- #
@@ -33,8 +43,8 @@ def run_inference(params):
     config = {
         "baseurl": "http://127.0.0.1:3000",
         "api": {
-            "txt2img":  ("POST", "/sdapi/v1/txt2img"),
-            "img2img":  ("POST", "/sdapi/v1/img2img"),
+            "txt2img": ("POST", "/sdapi/v1/txt2img"),
+            "img2img": ("POST", "/sdapi/v1/img2img"),
             "png-info": ("POST", "/sdapi/v1/png-info"),
             "getModels": ("GET", "/sdapi/v1/sd-models"),
             "getOptions": ("GET", "/sdapi/v1/options"),
@@ -64,14 +74,14 @@ def run_inference(params):
 
     if api_verb == "GET":
         response = automatic_session.get(
-                url='%s%s' % (config["baseurl"], api_path),
-                timeout=config["timeout"])
+            url='%s%s' % (config["baseurl"], api_path),
+            timeout=config["timeout"])
 
     if api_verb == "POST":
         response = automatic_session.post(
-                url='%s%s' % (config["baseurl"], api_path),
-                json=params, 
-                timeout=config["timeout"])
+            url='%s%s' % (config["baseurl"], api_path),
+            json=params,
+            timeout=config["timeout"])
 
     return response.json()
 
@@ -85,6 +95,10 @@ def handler(event):
     '''
 
     json = run_inference(event["input"])
+
+    # upload the image to S3
+    compress_image(json["images"][0])
+    json["images"] = [rp_upload.upload_image(event['id'], "./image.jpg")]
 
     # return the output that you want to be returned like pre-signed URLs to output artifacts
     return json
